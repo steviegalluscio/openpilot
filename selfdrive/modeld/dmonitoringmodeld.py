@@ -4,6 +4,12 @@ from openpilot.system.hardware import TICI
 os.environ['DEV'] = 'QCOM' if TICI else 'CPU'
 from tinygrad.tensor import Tensor
 from tinygrad.dtype import dtypes
+if TICI:
+  from openpilot.selfdrive.modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
+  os.environ['QCOM'] = '1'
+else:
+  from openpilot.selfdrive.modeld.runners.tinygrad_helpers import backend_from_jit
+
 import math
 import time
 import pickle
@@ -20,7 +26,7 @@ from openpilot.common.transformations.model import dmonitoringmodel_intrinsics, 
 from openpilot.common.transformations.camera import _ar_ox_fisheye, _os_fisheye
 from openpilot.selfdrive.modeld.models.commonmodel_pyx import CLContext, MonitoringModelFrame
 from openpilot.selfdrive.modeld.parse_model_outputs import sigmoid
-from openpilot.selfdrive.modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
+
 
 MODEL_WIDTH, MODEL_HEIGHT = DM_INPUT_SIZE
 CALIB_LEN = 3
@@ -74,6 +80,11 @@ class ModelState:
     self.tensor_inputs = {k: Tensor(v, device='NPY').realize() for k,v in self.numpy_inputs.items()}
     with open(MODEL_PKL_PATH, "rb") as f:
       self.model_run = pickle.load(f)
+
+    if not TICI:
+      backend = backend_from_jit(self.model_run)
+      os.environ[backend] = '1'
+      cloudlog.warning(f"dmonitoringmodeld backend set to {backend}")
 
   def run(self, buf: VisionBuf, calib: np.ndarray, transform: np.ndarray) -> tuple[np.ndarray, float]:
     self.numpy_inputs['calib'][0,:] = calib

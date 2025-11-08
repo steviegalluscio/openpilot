@@ -21,6 +21,7 @@ from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
 from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
 
+from openpilot.system.hardware import HARDWARE, PC
 from openpilot.system.version import get_build_metadata
 
 REPLAY = "REPLAY" in os.environ
@@ -68,7 +69,7 @@ class SelfdriveD:
     self.gps_location_service = get_gps_location_service(self.params)
     self.gps_packets = [self.gps_location_service]
     self.sensor_packets = ["accelerometer", "gyroscope"]
-    self.camera_packets = ["roadCameraState", "driverCameraState", "wideRoadCameraState"]
+    self.camera_packets = ["roadCameraState", "driverCameraState", "wideRoadCameraState"] if not PC else ["roadCameraState"]
 
     # TODO: de-couple selfdrived with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
@@ -76,6 +77,8 @@ class SelfdriveD:
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug']
     if SIMULATION:
       ignore += ['driverCameraState', 'managerState']
+    elif PC:
+      ignore += ['driverMonitoringState']
     if REPLAY:
       # no vipc in replay will make them ignored anyways
       ignore += ['roadCameraState', 'wideRoadCameraState']
@@ -198,9 +201,9 @@ class SelfdriveD:
     # Create events for temperature, disk space, and memory
     if self.sm['deviceState'].thermalStatus >= ThermalStatus.red:
       self.events.add(EventName.overheat)
-    if self.sm['deviceState'].freeSpacePercent < 7 and not SIMULATION:
+    if self.sm['deviceState'].freeSpacePercent < 7 and not (SIMULATION or PC):
       self.events.add(EventName.outOfSpace)
-    if self.sm['deviceState'].memoryUsagePercent > 90 and not SIMULATION:
+    if self.sm['deviceState'].memoryUsagePercent > 90 and not (SIMULATION or PC):
       self.events.add(EventName.lowMemory)
 
     # Alert if fan isn't spinning for 5 seconds
@@ -345,7 +348,7 @@ class SelfdriveD:
         self.events.add(EventName.paramsdTemporaryError)
 
     # conservative HW alert. if the data or frequency are off, locationd will throw an error
-    if any((self.sm.frame - self.sm.recv_frame[s])*DT_CTRL > 10. for s in self.sensor_packets):
+    if not PC and any((self.sm.frame - self.sm.recv_frame[s])*DT_CTRL > 10. for s in self.sensor_packets):
       self.events.add(EventName.sensorDataInvalid)
 
     if not REPLAY:

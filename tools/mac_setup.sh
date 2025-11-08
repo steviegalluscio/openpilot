@@ -41,7 +41,7 @@ brew "ffmpeg"
 brew "glfw"
 brew "libusb"
 brew "libtool"
-brew "llvm"
+brew "llvm@19"  # pinned for tinygrad
 brew "openssl@3.0"
 brew "qt@5"
 brew "zeromq"

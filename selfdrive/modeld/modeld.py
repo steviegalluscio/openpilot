@@ -6,6 +6,13 @@ USBGPU = "USBGPU" in os.environ
 if USBGPU:
   os.environ['DEV'] = 'AMD'
   os.environ['AMD_IFACE'] = 'USB'
+elif TICI:
+  from openpilot.selfdrive.modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
+  os.environ['QCOM'] = '1'
+else:
+  from openpilot.selfdrive.modeld.runners.tinygrad_helpers import backend_from_jit
+
+
 from tinygrad.tensor import Tensor
 from tinygrad.dtype import dtypes
 import time
@@ -29,7 +36,6 @@ from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.models.commonmodel_pyx import DrivingModelFrame, CLContext
-from openpilot.selfdrive.modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
 
 
 PROCESS_NAME = "selfdrive.modeld.modeld"
@@ -177,6 +183,11 @@ class ModelState:
 
     with open(POLICY_PKL_PATH, "rb") as f:
       self.policy_run = pickle.load(f)
+
+    if not TICI and not USBGPU:
+      backend = backend_from_jit(self.vision_run)
+      os.environ[backend] = '1'
+      cloudlog.warning(f"modeld backend set to {backend}")
 
   def slice_outputs(self, model_outputs: np.ndarray, output_slices: dict[str, slice]) -> dict[str, np.ndarray]:
     parsed_model_outputs = {k: model_outputs[np.newaxis, v] for k,v in output_slices.items()}

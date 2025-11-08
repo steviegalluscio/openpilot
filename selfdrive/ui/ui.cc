@@ -51,6 +51,14 @@ static void update_state(UIState *s) {
   } else if ((s->sm->frame - s->sm->rcv_frame("pandaStates")) > 5*UI_FREQ) {
     scene.pandaType = cereal::PandaState::PandaType::UNKNOWN;
   }
+  if (sm.updated("roadCameraState")) {
+    auto cam_state = sm["roadCameraState"].getRoadCameraState();
+    if (cam_state.getSensor() == cereal::FrameData::ImageSensor::UNKNOWN) {
+      scene.fcam_intrinsic_matrix = FCAM_INTRINSIC_MATRIX_UNKNOWN;
+    } else {
+      scene.fcam_intrinsic_matrix = FCAM_INTRINSIC_MATRIX_AR_OX;
+    }
+  }
   if (sm.updated("wideRoadCameraState")) {
     auto cam_state = sm["wideRoadCameraState"].getWideRoadCameraState();
     scene.light_sensor = std::max(100.0f - cam_state.getExposureValPercent(), 0.0f);
@@ -99,7 +107,7 @@ UIState::UIState(QObject *parent) : QObject(parent) {
   sm = std::make_unique<SubMaster>(std::vector<const char*>{
     "modelV2", "controlsState", "liveCalibration", "radarState", "deviceState",
     "pandaStates", "carParams", "driverMonitoringState", "carState", "driverStateV2",
-    "wideRoadCameraState", "managerState", "selfdriveState", "longitudinalPlan",
+    "roadCameraState", "wideRoadCameraState", "managerState", "selfdriveState", "longitudinalPlan",
   });
   prime_state = new PrimeState(this);
   language = QString::fromStdString(Params().get("LanguageSetting"));
