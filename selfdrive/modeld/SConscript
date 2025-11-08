@@ -56,6 +56,8 @@ if b"QCOM" in devs:
   flags = 'QCOM=1'
 elif b"METAL" in devs:
   flags = f'HOME={os.path.expanduser("~")} METAL=1 IMAGE=0 NOLOCALS=0'
+elif b"CL" in devs:
+  flags = 'CL=1'
 elif b"GPU" in devs:
   flags = 'GPU=1'
 elif b"LLVM" in devs:
