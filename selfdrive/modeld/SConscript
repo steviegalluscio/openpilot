@@ -16,7 +16,6 @@ common_src = [
 
 # OpenCL is a framework on Mac
 if arch == "Darwin":
-  # OpenCL is a framework on Mac
   frameworks += ['OpenCL']
 else:
   libs += ['OpenCL']
