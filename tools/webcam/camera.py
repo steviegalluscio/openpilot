@@ -26,7 +26,7 @@ class Camera:
 
     self.cap.read()
 
-    print(f"W: {self.W} H: {self.H} fps: {self.fps} backend: {self.cap.getBackendName()}")
+    print(f"W: {self.W} H: {self.H} fps: {self.fps} ")#backend: {self.cap.getBackendName()}")
 
   @classmethod
   def bgr2nv12(self, bgr):
